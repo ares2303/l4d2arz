@@ -7,7 +7,7 @@ public Plugin myinfo = {
     name = "Glow Overlay",
     author = "NTLDR",
     description = "",
-    version = "1.0",
+    version = "2.0",
     url = ""
 };
 
@@ -21,9 +21,6 @@ char g_sColorRGBs[][] = {
 
 char g_sSelectedGlow[MAXPLAYERS + 1][32];
 char g_sSelectedColor[MAXPLAYERS + 1][32];
-
-bool g_bHasRainbowGlow[MAXPLAYERS + 1];
-bool g_bHasRainbowColor[MAXPLAYERS + 1];
 
 Cookie g_hGlowCookie;
 Cookie g_hColorCookie;
@@ -51,9 +48,18 @@ public void OnPluginStart() {
     RegAdminCmd("sm_gpurple", Command_PURPLE, ADMFLAG_CUSTOM1);
     RegAdminCmd("sm_gorange", Command_ORANGE, ADMFLAG_CUSTOM1);
     RegAdminCmd("sm_grainbow", Command_RAINBOW, ADMFLAG_CUSTOM1);
-
     HookEvent("player_spawn", Event_PlayerSpawn);
     HookEvent("player_team", Event_PlayerTeam);
+    HookEvent("player_use", Event_PlayerUse);
+    HookEvent("heal_begin", Event_HealBegin);
+    HookEvent("heal_success", Event_HealSuccess);
+    HookEvent("heal_end", Event_HealEnd);
+    HookEvent("survivor_rescued", Event_SurvivorRescued);
+    HookEvent("player_left_start_area", Event_PlayerLeftStartArea);
+    HookEvent("player_left_checkpoint", Event_PlayerLeftCheckpoint);
+    HookEvent("defibrillator_used", Event_DefibrillatorUsed);
+    HookEvent("player_bot_replace", Event_PlayerBotReplace);
+    HookEvent("bot_player_replace", Event_BotPlayerReplace);
 
     for (int i = 1; i <= MaxClients; i++) {
         if (IsClientInGame(i)) {
@@ -71,20 +77,122 @@ public void OnClientCookiesCached(int client) {
     if (g_hColorCookie != null) {
         g_hColorCookie.Get(client, g_sSelectedColor[client], 32);
     }
-    ApplyGlowAndColor(client);
+    RequestApplyGlow(client);
 }
 
 public void OnClientDisconnect(int client) {
     g_sSelectedGlow[client][0] = '\0';
     g_sSelectedColor[client][0] = '\0';
-    g_bHasRainbowGlow[client] = false;
-    g_bHasRainbowColor[client] = false;
+}
+
+bool CanUserHaveGlow(int client) {
+    if (!IsClientInGame(client)) return false;
+    AdminId admin = GetUserAdmin(client);
+    if (admin == INVALID_ADMIN_ID) return false;
+    return GetAdminFlag(admin, Admin_Custom1) || GetAdminFlag(admin, Admin_Root);
+}
+
+int GetClientOfIdleClient(int bot) {
+    if (HasEntProp(bot, Prop_Send, "m_humanSpectatorUserID")) {
+        int userid = GetEntProp(bot, Prop_Send, "m_humanSpectatorUserID");
+        if (userid > 0) {
+            int owner = GetClientOfUserId(userid);
+            if (owner > 0 && IsClientInGame(owner)) {
+                return owner;
+            }
+        }
+    }
+    return 0;
+}
+
+void RequestApplyGlow(int client) {
+    if (client > 0 && IsClientInGame(client)) {
+        RequestFrame(Frame_ApplyGlowAndColor, GetClientUserId(client));
+    }
+}
+
+void Frame_ApplyGlowAndColor(any userid) {
+    int client = GetClientOfUserId(userid);
+    if (client > 0 && IsClientInGame(client)) {
+        ApplyGlowAndColor(client);
+    }
+}
+
+public Action Timer_ApplyGlow(Handle timer, any userid) {
+    int client = GetClientOfUserId(userid);
+    if (client > 0 && IsClientInGame(client)) {
+        ApplyGlowAndColor(client);
+    }
+    return Plugin_Handled;
+}
+
+public void Event_PlayerBotReplace(Event event, const char[] name, bool dontBroadcast) {
+    int bot = GetClientOfUserId(event.GetInt("bot"));
+    if (bot > 0 && IsClientInGame(bot)) {
+        CreateTimer(0.1, Timer_ApplyGlow, GetClientUserId(bot), TIMER_FLAG_NO_MAPCHANGE);
+    }
+}
+
+public void Event_BotPlayerReplace(Event event, const char[] name, bool dontBroadcast) {
+    int player = GetClientOfUserId(event.GetInt("player"));
+    int bot = GetClientOfUserId(event.GetInt("bot"));
+    
+    if (bot > 0 && IsClientInGame(bot)) {
+        SetEntProp(bot, Prop_Send, "m_iGlowType", 0);
+        SetEntProp(bot, Prop_Send, "m_glowColorOverride", 0);
+        SetEntityRenderMode(bot, RENDER_NORMAL);
+        SetEntityRenderColor(bot, 255, 255, 255, 255);
+    }
+
+    if (player > 0 && IsClientInGame(player)) {
+        CreateTimer(0.1, Timer_ApplyGlow, GetClientUserId(player), TIMER_FLAG_NO_MAPCHANGE);
+    }
+}
+
+public void Event_PlayerSpawn(Event event, const char[] name, bool dontBroadcast) {
+    RequestApplyGlow(GetClientOfUserId(event.GetInt("userid")));
+}
+
+public void Event_PlayerTeam(Event event, const char[] name, bool dontBroadcast) {
+    RequestApplyGlow(GetClientOfUserId(event.GetInt("userid")));
+}
+
+public void Event_PlayerUse(Event event, const char[] name, bool dontBroadcast) {
+    RequestApplyGlow(GetClientOfUserId(event.GetInt("userid")));
+}
+
+public void Event_HealBegin(Event event, const char[] name, bool dontBroadcast) {
+    RequestApplyGlow(GetClientOfUserId(event.GetInt("userid")));
+    RequestApplyGlow(GetClientOfUserId(event.GetInt("subject")));
+}
+
+public void Event_HealSuccess(Event event, const char[] name, bool dontBroadcast) {
+    RequestApplyGlow(GetClientOfUserId(event.GetInt("health_restored")));
+    RequestApplyGlow(GetClientOfUserId(event.GetInt("subject")));
+}
+
+public void Event_HealEnd(Event event, const char[] name, bool dontBroadcast) {
+    RequestApplyGlow(GetClientOfUserId(event.GetInt("userid")));
+}
+
+public void Event_SurvivorRescued(Event event, const char[] name, bool dontBroadcast) {
+    RequestApplyGlow(GetClientOfUserId(event.GetInt("victim")));
+}
+
+public void Event_PlayerLeftStartArea(Event event, const char[] name, bool dontBroadcast) {
+    RequestApplyGlow(GetClientOfUserId(event.GetInt("userid")));
+}
+
+public void Event_PlayerLeftCheckpoint(Event event, const char[] name, bool dontBroadcast) {
+    RequestApplyGlow(GetClientOfUserId(event.GetInt("userid")));
+}
+
+public void Event_DefibrillatorUsed(Event event, const char[] name, bool dontBroadcast) {
+    RequestApplyGlow(GetClientOfUserId(event.GetInt("subject")));
 }
 
 public Action Cmd_GoMenu(int client, int args) {
-    if (client <= 0 || !IsClientInGame(client)) {
-        return Plugin_Handled;
-    }
+    if (client <= 0 || !IsClientInGame(client)) return Plugin_Handled;
     OpenGoMenu(client);
     return Plugin_Handled;
 }
@@ -102,14 +210,9 @@ public int Menu_GoMain(Menu menu, MenuAction action, int param1, int param2) {
     if (action == MenuAction_Select) {
         char info[32];
         menu.GetItem(param2, info, sizeof(info));
-        if (strcmp(info, "glow") == 0) {
-            OpenGlowMenu(param1);
-        } else if (strcmp(info, "color") == 0) {
-            OpenColorMenu(param1);
-        }
-    } else if (action == MenuAction_End) {
-        delete menu;
-    }
+        if (strcmp(info, "glow") == 0) OpenGlowMenu(param1);
+        else if (strcmp(info, "color") == 0) OpenColorMenu(param1);
+    } else if (action == MenuAction_End) delete menu;
     return 0;
 }
 
@@ -131,24 +234,18 @@ public int Menu_Glow(Menu menu, MenuAction action, int param1, int param2) {
         menu.GetItem(param2, info, sizeof(info));
         if (strcmp(info, "none") == 0) {
             g_sSelectedGlow[param1][0] = '\0';
-            if (g_hGlowCookie != null) {
-                g_hGlowCookie.Set(param1, "");
-            }
+            if (g_hGlowCookie != null) g_hGlowCookie.Set(param1, "");
             PrintToChat(param1, "\x04[Glow Overlay] \x01Glow disabled.");
         } else {
             strcopy(g_sSelectedGlow[param1], 32, info);
-            if (g_hGlowCookie != null) {
-                g_hGlowCookie.Set(param1, info);
-            }
+            if (g_hGlowCookie != null) g_hGlowCookie.Set(param1, info);
             PrintToChat(param1, "\x04[Glow Overlay] \x01Glow color updated!");
         }
         ApplyGlowAndColor(param1);
         OpenGlowMenu(param1);
     } else if (action == MenuAction_Cancel && param2 == MenuCancel_ExitBack) {
         OpenGoMenu(param1);
-    } else if (action == MenuAction_End) {
-        delete menu;
-    }
+    } else if (action == MenuAction_End) delete menu;
     return 0;
 }
 
@@ -170,46 +267,19 @@ public int Menu_Color(Menu menu, MenuAction action, int param1, int param2) {
         menu.GetItem(param2, info, sizeof(info));
         if (strcmp(info, "none") == 0) {
             g_sSelectedColor[param1][0] = '\0';
-            if (g_hColorCookie != null) {
-                g_hColorCookie.Set(param1, "");
-            }
+            if (g_hColorCookie != null) g_hColorCookie.Set(param1, "");
             PrintToChat(param1, "\x04[Glow Overlay] \x01Body Color disabled.");
         } else {
             strcopy(g_sSelectedColor[param1], 32, info);
-            if (g_hColorCookie != null) {
-                g_hColorCookie.Set(param1, info);
-            }
+            if (g_hColorCookie != null) g_hColorCookie.Set(param1, info);
             PrintToChat(param1, "\x04[Glow Overlay] \x01Body Color updated!");
         }
         ApplyGlowAndColor(param1);
         OpenColorMenu(param1);
     } else if (action == MenuAction_Cancel && param2 == MenuCancel_ExitBack) {
         OpenGoMenu(param1);
-    } else if (action == MenuAction_End) {
-        delete menu;
-    }
+    } else if (action == MenuAction_End) delete menu;
     return 0;
-}
-
-public void Event_PlayerSpawn(Event event, const char[] name, bool dontBroadcast) {
-    int client = GetClientOfUserId(event.GetInt("userid"));
-    if (client > 0 && IsClientInGame(client)) {
-        RequestFrame(Frame_ApplyGlowAndColor, GetClientUserId(client));
-    }
-}
-
-public void Event_PlayerTeam(Event event, const char[] name, bool dontBroadcast) {
-    int client = GetClientOfUserId(event.GetInt("userid"));
-    if (client > 0 && IsClientInGame(client)) {
-        RequestFrame(Frame_ApplyGlowAndColor, GetClientUserId(client));
-    }
-}
-
-void Frame_ApplyGlowAndColor(any userid) {
-    int client = GetClientOfUserId(userid);
-    if (client > 0 && IsClientInGame(client)) {
-        ApplyGlowAndColor(client);
-    }
 }
 
 void ApplyGlowAndColor(int client) {
@@ -217,64 +287,83 @@ void ApplyGlowAndColor(int client) {
         return;
     }
 
-    if (g_sSelectedGlow[client][0] != '\0') {
-        if (strcmp(g_sSelectedGlow[client], "rainbow", false) == 0) {
-            g_bHasRainbowGlow[client] = true;
-        } else {
-            g_bHasRainbowGlow[client] = false;
-            int rgb[3];
-            GetRGBFromString(g_sSelectedGlow[client], rgb);
-            int glowColorInt = rgb[0] + (rgb[1] * 256) + (rgb[2] * 65536);
-            SetEntProp(client, Prop_Send, "m_iGlowType", 3);
-            SetEntProp(client, Prop_Send, "m_glowColorOverride", glowColorInt);
+    int target = client;
+
+    if (IsFakeClient(client)) {
+        target = GetClientOfIdleClient(client);
+        if (target <= 0 || !IsClientInGame(target)) {
+            SetEntProp(client, Prop_Send, "m_iGlowType", 0);
+            SetEntProp(client, Prop_Send, "m_glowColorOverride", 0);
+            SetEntityRenderMode(client, RENDER_NORMAL);
+            SetEntityRenderColor(client, 255, 255, 255, 255);
+            return;
         }
-    } else {
-        g_bHasRainbowGlow[client] = false;
+    }
+
+    if (!CanUserHaveGlow(target)) {
+        SetEntProp(client, Prop_Send, "m_iGlowType", 0);
+        SetEntProp(client, Prop_Send, "m_glowColorOverride", 0);
+        SetEntityRenderMode(client, RENDER_NORMAL);
+        SetEntityRenderColor(client, 255, 255, 255, 255);
+        return;
+    }
+
+    if (g_sSelectedGlow[target][0] != '\0' && strcmp(g_sSelectedGlow[target], "rainbow", false) != 0) {
+        int rgb[3];
+        GetRGBFromString(g_sSelectedGlow[target], rgb);
+        int glowColorInt = rgb[0] + (rgb[1] * 256) + (rgb[2] * 65536);
+        SetEntProp(client, Prop_Send, "m_iGlowType", 3);
+        SetEntProp(client, Prop_Send, "m_glowColorOverride", glowColorInt);
+        SetEntProp(client, Prop_Send, "m_nGlowRange", 99999); 
+        SetEntProp(client, Prop_Send, "m_nGlowRangeMin", 0);  
+    } else if (g_sSelectedGlow[target][0] == '\0') {
         SetEntProp(client, Prop_Send, "m_iGlowType", 0);
         SetEntProp(client, Prop_Send, "m_glowColorOverride", 0);
     }
 
-    if (g_sSelectedColor[client][0] != '\0') {
-        if (strcmp(g_sSelectedColor[client], "rainbow", false) == 0) {
-            g_bHasRainbowColor[client] = true;
-        } else {
-            g_bHasRainbowColor[client] = false;
-            int rgb[3];
-            GetRGBFromString(g_sSelectedColor[client], rgb);
-            SetEntityRenderMode(client, RENDER_TRANSCOLOR);
-            SetEntityRenderColor(client, rgb[0], rgb[1], rgb[2], 255);
-        }
-    } else {
-        g_bHasRainbowColor[client] = false;
+    if (g_sSelectedColor[target][0] != '\0' && strcmp(g_sSelectedColor[target], "rainbow", false) != 0) {
+        int rgb[3];
+        GetRGBFromString(g_sSelectedColor[target], rgb);
+        SetEntityRenderMode(client, RENDER_TRANSCOLOR);
+        SetEntityRenderColor(client, rgb[0], rgb[1], rgb[2], 255);
+    } else if (g_sSelectedColor[target][0] == '\0') {
         SetEntityRenderMode(client, RENDER_NORMAL);
         SetEntityRenderColor(client, 255, 255, 255, 255);
     }
 }
 
 public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3], float angles[3], int &weapon, int &subtype, int &cmdnum, int &tickcount, int &seed, int mouse[2]) {
-    if (client <= 0 || client > MaxClients || !IsClientInGame(client) || !IsPlayerAlive(client) || IsFakeClient(client)) {
+    if (client <= 0 || client > MaxClients || !IsClientInGame(client) || !IsPlayerAlive(client) || GetClientTeam(client) != 2) {
         return Plugin_Continue;
+    }
+
+    int target = client;
+    if (IsFakeClient(client)) {
+        target = GetClientOfIdleClient(client);
+        if (target <= 0 || !IsClientInGame(target)) {
+            return Plugin_Continue;
+        }
     }
 
     if (tickcount % 30 == 0) {
         ApplyGlowAndColor(client);
     }
 
-    if (g_bHasRainbowGlow[client] || g_bHasRainbowColor[client]) {
-        if (tickcount % 10 == 0) {
-            if (g_bHasRainbowGlow[client]) {
-                int rgb[3];
-                GetRGBFromString("rainbow", rgb);
-                int glowColorInt = rgb[0] + (rgb[1] * 256) + (rgb[2] * 65536);
-                SetEntProp(client, Prop_Send, "m_iGlowType", 3);
-                SetEntProp(client, Prop_Send, "m_glowColorOverride", glowColorInt);
-            }
-            if (g_bHasRainbowColor[client]) {
-                int rgb[3];
-                GetRGBFromString("rainbow", rgb);
-                SetEntityRenderMode(client, RENDER_TRANSCOLOR);
-                SetEntityRenderColor(client, rgb[0], rgb[1], rgb[2], 255);
-            }
+    if (tickcount % 10 == 0) {
+        if (strcmp(g_sSelectedGlow[target], "rainbow", false) == 0) {
+            int rgb[3];
+            GetRGBFromString("rainbow", rgb);
+            int glowColorInt = rgb[0] + (rgb[1] * 256) + (rgb[2] * 65536);
+            SetEntProp(client, Prop_Send, "m_iGlowType", 3);
+            SetEntProp(client, Prop_Send, "m_glowColorOverride", glowColorInt);
+            SetEntProp(client, Prop_Send, "m_nGlowRange", 99999);
+            SetEntProp(client, Prop_Send, "m_nGlowRangeMin", 0);
+        }
+        if (strcmp(g_sSelectedColor[target], "rainbow", false) == 0) {
+            int rgb[3];
+            GetRGBFromString("rainbow", rgb);
+            SetEntityRenderMode(client, RENDER_TRANSCOLOR);
+            SetEntityRenderColor(client, rgb[0], rgb[1], rgb[2], 255);
         }
     }
 
@@ -283,10 +372,20 @@ public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3
 
 void SetGlowShortcut(int client, const char[] rgb) {
     strcopy(g_sSelectedGlow[client], 32, rgb);
-    if (g_hGlowCookie != null) {
-        g_hGlowCookie.Set(client, rgb);
+    if (g_hGlowCookie != null) g_hGlowCookie.Set(client, rgb);
+    
+    if (GetClientTeam(client) != 2) {
+        for (int i = 1; i <= MaxClients; i++) {
+            if (IsClientInGame(i) && IsFakeClient(i) && GetClientTeam(i) == 2) {
+                if (GetClientOfIdleClient(i) == client) {
+                    ApplyGlowAndColor(i);
+                    return;
+                }
+            }
+        }
+    } else {
+        ApplyGlowAndColor(client);
     }
-    ApplyGlowAndColor(client);
 }
 
 public Action Command_RG(int client, int args) {
