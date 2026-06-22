@@ -33,22 +33,22 @@ static char sColorName[][] =
 static const int
 	COLOR_VALUE[] = 
 {
-	0x000000,	//   0
-	0x00FF00,	//   0 + (255 * 256) + (  0 * 65536));
-	0xFA1307,	//   7 + ( 19 * 256) + (250 * 65536));
-	0xFA13F9,	// 249 + ( 19 * 256) + (250 * 65536));
-	0xFAFA42,	//  66 + (250 * 256) + (250 * 65536));
-	0x005AFF,	//   5 + (175 * 256) + (255 * 65536));
-	0x0000FF,	// 255 + (  0 * 256) + (  0 * 65536));
-	0x323232,	//  50 + ( 50 * 256) + ( 50 * 65536));
-	0x00FFFF,	// 255 + (255 * 256) + (  0 * 65536));
-	0x00FF80,	// 128 + (255 * 256) + (  0 * 65536));
-	0x000080,	// 128 + (  0 * 256) + (  0 * 65536));
-	0x808000,	//   0 + (128 * 256) + (128 * 65536));
-	0xFF7EA8,	// 255 + (126 * 256) + (168 * 65536));
-	0xFF009B,	// 155 + (  0 * 256) + (255 * 65536));
-	0xFFFFFF,	//  -1 + ( -1 * 256) + ( -1 * 65536));
-	0x009BFF,	// 255 + (155 * 256) + (  0 * 65536));
+	0x000000,
+	0x00FF00,
+	0xFA1307,
+	0xFA13F9,
+	0xFAFA42,
+	0x005AFF,
+	0x0000FF,
+	0x323232,
+	0x00FFFF,
+	0x00FF80,
+	0x000080,
+	0x808000,
+	0xFF7EA8,
+	0xFF009B,
+	0xFFFFFF,
+	0x009BFF,
 	0x000000
 };
 
@@ -66,7 +66,6 @@ public void OnPluginStart()
 {
 	LoadTranslations("l4d2_glowcolor.phrases");
 	
-	// Register cookie for saving preferences
 	g_hGlowCookie = RegClientCookie("l4d2_overlay_glowcolor", "Saves overlay glow color index", CookieAccess_Private);
 	
 	RegAdminCmd("sm_gocolor", GlowColors, ADMFLAG_CUSTOM1);
@@ -103,7 +102,6 @@ public APLRes AskPluginLoad2(Handle myself, bool late, char[] error, int err_max
 	return APLRes_Success;	
 }
 
-// Loads the saved cookie when client preferences are ready
 public void OnClientCookiesCached(int client)
 {
 	if (client > 0 && client <= MaxClients && IsClientConnected(client) && !IsFakeClient(client))
@@ -116,10 +114,9 @@ public void OnClientCookiesCached(int client)
 		}
 		else
 		{
-			glowscolor[client] = 0; // Default to Desactive
+			glowscolor[client] = 0;
 		}
 		
-		// In case the overlay model is already active before cookies loaded (Race condition fix)
 		if (IsClientInGame(client) && IsPlayerAlive(client))
 		{
 			int iOverlayModel = GetOverlayModelSafe(client);
@@ -136,9 +133,6 @@ public void OnClientDisconnect(int client)
 	glowscolor[client] = 0;
 }
 
-// ------------------------------------------------------------------
-// LMC Forwards (Automatically called when LMC sets up overlay models)
-// ------------------------------------------------------------------
 public void LMC_OnClientModelApplied(int iClient, int iEntity, const char[] sModel, bool bBaseReattach)
 {
 	ApplySavedGlow(iClient, iEntity);
@@ -161,9 +155,6 @@ void ApplySavedGlow(int client, int entity)
 	}
 }
 
-// ------------------------------------------------------------------
-// Core Logic
-// ------------------------------------------------------------------
 public Action GlowColors(int client, int args)
 {
 	if (!IsValidClient(client) || GetClientTeam(client) != 2)
@@ -192,12 +183,10 @@ public void GlowColorCallback(Menu menu, MenuAction action, int client, int item
 	}
 }
 
-// Helper to save setting, update array, and apply immediately if possible
 void SetClientGlowColor(int client, int colorIndex)
 {
 	glowscolor[client] = colorIndex;
 	
-	// Save choice to cookie
 	if (AreClientCookiesCached(client) && !IsFakeClient(client))
 	{
 		char sValue[8];
@@ -216,12 +205,10 @@ void ApplyGlow(int entity, int colorIndex)
 {
 	if (colorIndex == 0)
 	{
-		// Safely disables glow on "Desactive"
 		SetEntProp(entity, Prop_Send, "m_iGlowType", 0);
 	}
 	else
 	{
-		// Enables glow
 		SetEntProp(entity, Prop_Send, "m_glowColorOverride", COLOR_VALUE[colorIndex]);
 		SetEntProp(entity, Prop_Send, "m_iGlowType", 3);
 		SetEntProp(entity, Prop_Send, "m_nGlowRange", 99999);
@@ -238,9 +225,6 @@ int GetOverlayModelSafe(int client)
 	return -1;
 }
 
-// ------------------------------------------------------------------
-// Commands
-// ------------------------------------------------------------------
 public Action Command_RG(int client, int args)
 {
 	if (IsValidClient(client)) SetClientGlowColor(client, 0);
@@ -331,9 +315,6 @@ public Action Command_ORANGE(int client, int args)
 	return Plugin_Handled;
 }
 
-// ------------------------------------------------------------------
-// Stocks
-// ------------------------------------------------------------------
 stock bool IsValidClient(int client)
 {
 	return client > 0 && client <= MaxClients && IsClientConnected(client) && IsClientInGame(client);
