@@ -12,11 +12,11 @@ public Plugin myinfo = {
 };
 
 char g_sColorNames[][] = {
-    "Red", "Blue", "Green", "Yellow", "Purple", "Cyan", "Orange", "Pink", "White", "Rainbow"
+    "Green", "Blue", "Violet", "Cyan", "Orange", "Red", "Gray", "Yellow", "Lime", "Maroon", "Teal", "Pink", "Purple", "White", "Golden", "Rainbow"
 };
 
 char g_sColorRGBs[][] = {
-    "255 0 0", "0 0 255", "0 255 0", "255 255 0", "128 0 128", "0 255 255", "255 165 0", "255 0 255", "255 255 255", "rainbow"
+    "0 255 0", "7 19 250", "249 19 250", "66 250 250", "255 90 0", "255 0 0", "50 50 50", "255 255 0", "128 255 0", "128 0 0", "0 128 128", "168 126 255", "155 0 255", "255 255 255", "255 155 0", "rainbow"
 };
 
 char g_sSelectedGlow[MAXPLAYERS + 1][32];
@@ -33,6 +33,24 @@ public void OnPluginStart() {
     g_hColorCookie = new Cookie("glow_overlay_color", "Glow overlay color settings", CookieAccess_Private);
 
     RegConsoleCmd("sm_gomenu", Cmd_GoMenu, "Opens Glow Overlay Menu");
+    RegAdminCmd("sm_gcolor", Cmd_GoMenu, ADMFLAG_CUSTOM1);
+
+    RegAdminCmd("sm_grg", Command_RG, ADMFLAG_CUSTOM1);
+    RegAdminCmd("sm_gwhite", Command_WHITE, ADMFLAG_CUSTOM1);
+    RegAdminCmd("sm_ggreen", Command_GREEN, ADMFLAG_CUSTOM1);
+    RegAdminCmd("sm_gred", Command_RED, ADMFLAG_CUSTOM1);
+    RegAdminCmd("sm_gblue", Command_BLUE, ADMFLAG_CUSTOM1);
+    RegAdminCmd("sm_ggold", Command_GOLD, ADMFLAG_CUSTOM1);
+    RegAdminCmd("sm_gcyan", Command_CYAN, ADMFLAG_CUSTOM1);
+    RegAdminCmd("sm_gviolet", Command_VIOLET, ADMFLAG_CUSTOM1);
+    RegAdminCmd("sm_gmar", Command_MAROON, ADMFLAG_CUSTOM1);
+    RegAdminCmd("sm_glima", Command_LIME, ADMFLAG_CUSTOM1);
+    RegAdminCmd("sm_gyellow", Command_YELLOW, ADMFLAG_CUSTOM1);
+    RegAdminCmd("sm_gtea", Command_TEAL, ADMFLAG_CUSTOM1);
+    RegAdminCmd("sm_gpink", Command_PINK, ADMFLAG_CUSTOM1);
+    RegAdminCmd("sm_gpurple", Command_PURPLE, ADMFLAG_CUSTOM1);
+    RegAdminCmd("sm_gorange", Command_ORANGE, ADMFLAG_CUSTOM1);
+    RegAdminCmd("sm_grainbow", Command_RAINBOW, ADMFLAG_CUSTOM1);
 
     HookEvent("player_spawn", Event_PlayerSpawn);
     HookEvent("player_team", Event_PlayerTeam);
@@ -199,7 +217,6 @@ void ApplyGlowAndColor(int client) {
         return;
     }
 
-    // Apply Glow
     if (g_sSelectedGlow[client][0] != '\0') {
         if (strcmp(g_sSelectedGlow[client], "rainbow", false) == 0) {
             g_bHasRainbowGlow[client] = true;
@@ -217,7 +234,6 @@ void ApplyGlowAndColor(int client) {
         SetEntProp(client, Prop_Send, "m_glowColorOverride", 0);
     }
 
-    // Apply Body Color (Overlay)
     if (g_sSelectedColor[client][0] != '\0') {
         if (strcmp(g_sSelectedColor[client], "rainbow", false) == 0) {
             g_bHasRainbowColor[client] = true;
@@ -240,6 +256,10 @@ public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3
         return Plugin_Continue;
     }
 
+    if (tickcount % 30 == 0) {
+        ApplyGlowAndColor(client);
+    }
+
     if (g_bHasRainbowGlow[client] || g_bHasRainbowColor[client]) {
         if (tickcount % 10 == 0) {
             if (g_bHasRainbowGlow[client]) {
@@ -259,6 +279,142 @@ public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3
     }
 
     return Plugin_Continue;
+}
+
+void SetGlowShortcut(int client, const char[] rgb) {
+    strcopy(g_sSelectedGlow[client], 32, rgb);
+    if (g_hGlowCookie != null) {
+        g_hGlowCookie.Set(client, rgb);
+    }
+    ApplyGlowAndColor(client);
+}
+
+public Action Command_RG(int client, int args) {
+    if (client > 0 && IsClientInGame(client)) {
+        SetGlowShortcut(client, "");
+        PrintToChat(client, "\x04[Glow Overlay] \x01Glow disabled.");
+    }
+    return Plugin_Handled;
+}
+
+public Action Command_WHITE(int client, int args) {
+    if (client > 0 && IsClientInGame(client)) {
+        SetGlowShortcut(client, "255 255 255");
+        PrintToChat(client, "\x04[Glow Overlay] \x01Glow set to White!");
+    }
+    return Plugin_Handled;
+}
+
+public Action Command_GREEN(int client, int args) {
+    if (client > 0 && IsClientInGame(client)) {
+        SetGlowShortcut(client, "0 255 0");
+        PrintToChat(client, "\x04[Glow Overlay] \x01Glow set to Green!");
+    }
+    return Plugin_Handled;
+}
+
+public Action Command_RED(int client, int args) {
+    if (client > 0 && IsClientInGame(client)) {
+        SetGlowShortcut(client, "255 0 0");
+        PrintToChat(client, "\x04[Glow Overlay] \x01Glow set to Red!");
+    }
+    return Plugin_Handled;
+}
+
+public Action Command_BLUE(int client, int args) {
+    if (client > 0 && IsClientInGame(client)) {
+        SetGlowShortcut(client, "7 19 250");
+        PrintToChat(client, "\x04[Glow Overlay] \x01Glow set to Blue!");
+    }
+    return Plugin_Handled;
+}
+
+public Action Command_GOLD(int client, int args) {
+    if (client > 0 && IsClientInGame(client)) {
+        SetGlowShortcut(client, "255 155 0");
+        PrintToChat(client, "\x04[Glow Overlay] \x01Glow set to Gold!");
+    }
+    return Plugin_Handled;
+}
+
+public Action Command_CYAN(int client, int args) {
+    if (client > 0 && IsClientInGame(client)) {
+        SetGlowShortcut(client, "66 250 250");
+        PrintToChat(client, "\x04[Glow Overlay] \x01Glow set to Cyan!");
+    }
+    return Plugin_Handled;
+}
+
+public Action Command_VIOLET(int client, int args) {
+    if (client > 0 && IsClientInGame(client)) {
+        SetGlowShortcut(client, "249 19 250");
+        PrintToChat(client, "\x04[Glow Overlay] \x01Glow set to Violet!");
+    }
+    return Plugin_Handled;
+}
+
+public Action Command_MAROON(int client, int args) {
+    if (client > 0 && IsClientInGame(client)) {
+        SetGlowShortcut(client, "128 0 0");
+        PrintToChat(client, "\x04[Glow Overlay] \x01Glow set to Maroon!");
+    }
+    return Plugin_Handled;
+}
+
+public Action Command_LIME(int client, int args) {
+    if (client > 0 && IsClientInGame(client)) {
+        SetGlowShortcut(client, "128 255 0");
+        PrintToChat(client, "\x04[Glow Overlay] \x01Glow set to Lime!");
+    }
+    return Plugin_Handled;
+}
+
+public Action Command_YELLOW(int client, int args) {
+    if (client > 0 && IsClientInGame(client)) {
+        SetGlowShortcut(client, "255 255 0");
+        PrintToChat(client, "\x04[Glow Overlay] \x01Glow set to Yellow!");
+    }
+    return Plugin_Handled;
+}
+
+public Action Command_TEAL(int client, int args) {
+    if (client > 0 && IsClientInGame(client)) {
+        SetGlowShortcut(client, "0 128 128");
+        PrintToChat(client, "\x04[Glow Overlay] \x01Glow set to Teal!");
+    }
+    return Plugin_Handled;
+}
+
+public Action Command_PINK(int client, int args) {
+    if (client > 0 && IsClientInGame(client)) {
+        SetGlowShortcut(client, "168 126 255");
+        PrintToChat(client, "\x04[Glow Overlay] \x01Glow set to Pink!");
+    }
+    return Plugin_Handled;
+}
+
+public Action Command_PURPLE(int client, int args) {
+    if (client > 0 && IsClientInGame(client)) {
+        SetGlowShortcut(client, "155 0 255");
+        PrintToChat(client, "\x04[Glow Overlay] \x01Glow set to Purple!");
+    }
+    return Plugin_Handled;
+}
+
+public Action Command_ORANGE(int client, int args) {
+    if (client > 0 && IsClientInGame(client)) {
+        SetGlowShortcut(client, "255 90 0");
+        PrintToChat(client, "\x04[Glow Overlay] \x01Glow set to Orange!");
+    }
+    return Plugin_Handled;
+}
+
+public Action Command_RAINBOW(int client, int args) {
+    if (client > 0 && IsClientInGame(client)) {
+        SetGlowShortcut(client, "rainbow");
+        PrintToChat(client, "\x04[Glow Overlay] \x01Glow set to Rainbow!");
+    }
+    return Plugin_Handled;
 }
 
 void GetRGBFromString(const char[] colorStr, int rgb[3]) {
