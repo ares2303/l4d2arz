@@ -354,11 +354,6 @@ public int Menu_GoMain(Menu menu, MenuAction action, int param1, int param2) {
                         }
                     }
                 }
-
-                int glowEnt = GetGlowTarget(targetEnt);
-                SetEntProp(glowEnt, Prop_Send, "m_iGlowType", 0);
-                SetEntProp(glowEnt, Prop_Send, "m_glowColorOverride", 0);
-                
                 int colorEnt = GetColorTarget(targetEnt);
                 SetEntityRenderMode(colorEnt, RENDER_NORMAL);
                 SetEntityRenderColor(colorEnt, 255, 255, 255, 255);
@@ -461,9 +456,7 @@ public int Menu_Color(Menu menu, MenuAction action, int param1, int param2) {
 }
 
 void ApplyGlowAndColor(int client) {
-    if (!IsClientInGame(client) || !IsPlayerAlive(client) || GetClientTeam(client) != 2) {
-        return;
-    }
+    if (!IsClientInGame(client) || !IsPlayerAlive(client) || GetClientTeam(client) != 2) return;
 
     int target = client;
     if (IsFakeClient(client)) {
@@ -485,50 +478,43 @@ void ApplyGlowAndColor(int client) {
         }
     }
 
-    if (g_sUseRank[target] == 1) {
-        return;
-    }
-
-    if (!CanUserHaveGlow(target)) {
-        int glowEnt = GetGlowTarget(client);
-        SetEntProp(glowEnt, Prop_Send, "m_iGlowType", 0);
-        SetEntProp(glowEnt, Prop_Send, "m_glowColorOverride", 0);
-        
-        int colorEnt = GetColorTarget(client);
-        SetEntityRenderMode(colorEnt, RENDER_NORMAL);
-        SetEntityRenderColor(colorEnt, 255, 255, 255, 255);
-        
-        if (glowEnt != client) {
-            SetEntProp(client, Prop_Send, "m_iGlowType", 0);
-            SetEntProp(client, Prop_Send, "m_glowColorOverride", 0);
-        }
-        return;
-    }
-
     int glowEnt = GetGlowTarget(client);
-    if (g_sSelectedGlow[target][0] != '\0' && strcmp(g_sSelectedGlow[target], "rainbow", false) != 0) {
-        int rgb[3];
-        GetRGBFromString(g_sSelectedGlow[target], rgb);
-        int glowColorInt = rgb[0] + (rgb[1] * 256) + (rgb[2] * 65536);
-        SetEntProp(glowEnt, Prop_Send, "m_iGlowType", 3);
-        SetEntProp(glowEnt, Prop_Send, "m_glowColorOverride", glowColorInt);
-        SetEntProp(glowEnt, Prop_Send, "m_nGlowRange", 99999); 
-        SetEntProp(glowEnt, Prop_Send, "m_nGlowRangeMin", 0);  
-        
-        if (glowEnt != client) {
-            SetEntProp(client, Prop_Send, "m_iGlowType", 0);
-            SetEntProp(client, Prop_Send, "m_glowColorOverride", 0);
-        }
-    } else if (g_sSelectedGlow[target][0] == '\0') {
+    if (!CanUserHaveGlow(target)) {
         SetEntProp(glowEnt, Prop_Send, "m_iGlowType", 0);
         SetEntProp(glowEnt, Prop_Send, "m_glowColorOverride", 0);
         if (glowEnt != client) {
             SetEntProp(client, Prop_Send, "m_iGlowType", 0);
             SetEntProp(client, Prop_Send, "m_glowColorOverride", 0);
+        }
+    } else {
+        if (g_sSelectedGlow[target][0] != '\0' && strcmp(g_sSelectedGlow[target], "rainbow", false) != 0) {
+            int rgb[3];
+            GetRGBFromString(g_sSelectedGlow[target], rgb);
+            int glowColorInt = rgb[0] + (rgb[1] * 256) + (rgb[2] * 65536);
+            SetEntProp(glowEnt, Prop_Send, "m_iGlowType", 3);
+            SetEntProp(glowEnt, Prop_Send, "m_glowColorOverride", glowColorInt);
+            SetEntProp(glowEnt, Prop_Send, "m_nGlowRange", 99999); 
+            SetEntProp(glowEnt, Prop_Send, "m_nGlowRangeMin", 0);  
+            
+            if (glowEnt != client) {
+                SetEntProp(client, Prop_Send, "m_iGlowType", 0);
+                SetEntProp(client, Prop_Send, "m_glowColorOverride", 0);
+            }
+        } else if (g_sSelectedGlow[target][0] == '\0') {
+            SetEntProp(glowEnt, Prop_Send, "m_iGlowType", 0);
+            SetEntProp(glowEnt, Prop_Send, "m_glowColorOverride", 0);
+            if (glowEnt != client) {
+                SetEntProp(client, Prop_Send, "m_iGlowType", 0);
+                SetEntProp(client, Prop_Send, "m_glowColorOverride", 0);
+            }
         }
     }
 
     int colorEnt = GetColorTarget(client);
+    if (g_sUseRank[target] == 1) {
+        return;
+    }
+
     if (g_sSelectedColor[target][0] != '\0' && strcmp(g_sSelectedColor[target], "rainbow", false) != 0) {
         int rgb[3];
         GetRGBFromString(g_sSelectedColor[target], rgb);
@@ -556,17 +542,10 @@ public Action Timer_UpdateVisuals(Handle timer) {
             int target = i;
             if (IsFakeClient(i)) {
                 target = GetClientOfIdleClient(i);
-                if (target <= 0 || !IsClientInGame(target)) {
-                    continue;
-                }
+                if (target <= 0 || !IsClientInGame(target)) continue;
             }
 
-            if (g_sUseRank[target] == 1) {
-                continue;
-            }
-            if (!CanUserHaveGlow(target)) {
-                continue;
-            }
+            if (!CanUserHaveGlow(target)) continue;
 
             int glowEnt = GetGlowTarget(i);
             int colorEnt = GetColorTarget(i);
@@ -582,15 +561,16 @@ public Action Timer_UpdateVisuals(Handle timer) {
                     SetEntProp(i, Prop_Send, "m_glowColorOverride", 0);
                 }
             }
-            if (strcmp(g_sSelectedColor[target], "rainbow", false) == 0) {
-                SetEntityRenderMode(colorEnt, RENDER_TRANSCOLOR);
-                SetEntityRenderColor(colorEnt, rgb[0], rgb[1], rgb[2], 255);
+
+            if (g_sUseRank[target] == 0) {
+                if (strcmp(g_sSelectedColor[target], "rainbow", false) == 0) {
+                    SetEntityRenderMode(colorEnt, RENDER_TRANSCOLOR);
+                    SetEntityRenderColor(colorEnt, rgb[0], rgb[1], rgb[2], 255);
+                }
             }
 
             if (tickCounter >= 10) {
-                if (strcmp(g_sSelectedGlow[target], "rainbow", false) != 0 || strcmp(g_sSelectedColor[target], "rainbow", false) != 0) {
-                    ApplyGlowAndColor(i);
-                }
+                ApplyGlowAndColor(i);
             }
         }
     }
@@ -605,14 +585,15 @@ public Action Timer_UpdateVisuals(Handle timer) {
             }
 
             if (target > 0 && IsClientInGame(target)) {
-                if (g_sUseRank[target] == 0) {
-                    if (CanUserHaveGlow(target)) {
-                        if (strcmp(g_sSelectedGlow[target], "rainbow", false) == 0) {
-                            SetEntProp(entity, Prop_Send, "m_iGlowType", 3);
-                            SetEntProp(entity, Prop_Send, "m_glowColorOverride", rainbowGlowInt);
-                            SetEntProp(entity, Prop_Send, "m_nGlowRange", 99999);
-                            SetEntProp(entity, Prop_Send, "m_nGlowRangeMin", 0);
-                        }
+                if (CanUserHaveGlow(target)) {
+                    if (strcmp(g_sSelectedGlow[target], "rainbow", false) == 0) {
+                        SetEntProp(entity, Prop_Send, "m_iGlowType", 3);
+                        SetEntProp(entity, Prop_Send, "m_glowColorOverride", rainbowGlowInt);
+                        SetEntProp(entity, Prop_Send, "m_nGlowRange", 99999);
+                        SetEntProp(entity, Prop_Send, "m_nGlowRangeMin", 0);
+                    }
+
+                    if (g_sUseRank[target] == 0) {
                         if (strcmp(g_sSelectedColor[target], "rainbow", false) == 0) {
                             SetEntityRenderMode(entity, RENDER_TRANSCOLOR);
                             SetEntityRenderColor(entity, rgb[0], rgb[1], rgb[2], 255);
@@ -623,9 +604,7 @@ public Action Timer_UpdateVisuals(Handle timer) {
         }
     }
     
-    if (tickCounter >= 10) {
-        tickCounter = 0;
-    }
+    if (tickCounter >= 10) tickCounter = 0;
     return Plugin_Continue;
 }
 
@@ -970,24 +949,25 @@ void Frame_ApplyDeathModelGlow(any entRef) {
             }
             
             if (target > 0 && IsClientInGame(target)) {
-                if (g_sUseRank[target] == 0) {
-                    if (CanUserHaveGlow(target)) {
-                        if (g_sSelectedGlow[target][0] != '\0') {
-                            if (strcmp(g_sSelectedGlow[target], "rainbow", false) == 0) {
-                                SetEntProp(entity, Prop_Send, "m_iGlowType", 3);
-                                SetEntProp(entity, Prop_Send, "m_glowColorOverride", 0);
-                                SetEntProp(entity, Prop_Send, "m_nGlowRange", 99999);
-                                SetEntProp(entity, Prop_Send, "m_nGlowRangeMin", 0);
-                            } else {
-                                int rgb[3];
-                                GetRGBFromString(g_sSelectedGlow[target], rgb);
-                                int glowColorInt = rgb[0] + (rgb[1] * 256) + (rgb[2] * 65536);
-                                SetEntProp(entity, Prop_Send, "m_iGlowType", 3);
-                                SetEntProp(entity, Prop_Send, "m_glowColorOverride", glowColorInt);
-                                SetEntProp(entity, Prop_Send, "m_nGlowRange", 99999);
-                                SetEntProp(entity, Prop_Send, "m_nGlowRangeMin", 0);
-                            }
+                if (CanUserHaveGlow(target)) {
+                    if (g_sSelectedGlow[target][0] != '\0') {
+                        if (strcmp(g_sSelectedGlow[target], "rainbow", false) == 0) {
+                            SetEntProp(entity, Prop_Send, "m_iGlowType", 3);
+                            SetEntProp(entity, Prop_Send, "m_glowColorOverride", 0);
+                            SetEntProp(entity, Prop_Send, "m_nGlowRange", 99999);
+                            SetEntProp(entity, Prop_Send, "m_nGlowRangeMin", 0);
+                        } else {
+                            int rgb[3];
+                            GetRGBFromString(g_sSelectedGlow[target], rgb);
+                            int glowColorInt = rgb[0] + (rgb[1] * 256) + (rgb[2] * 65536);
+                            SetEntProp(entity, Prop_Send, "m_iGlowType", 3);
+                            SetEntProp(entity, Prop_Send, "m_glowColorOverride", glowColorInt);
+                            SetEntProp(entity, Prop_Send, "m_nGlowRange", 99999);
+                            SetEntProp(entity, Prop_Send, "m_nGlowRangeMin", 0);
                         }
+                    }
+                    
+                    if (g_sUseRank[target] == 0) {
                         if (g_sSelectedColor[target][0] != '\0') {
                             if (strcmp(g_sSelectedColor[target], "rainbow", false) == 0) {
                                 SetEntityRenderMode(entity, RENDER_TRANSCOLOR);
