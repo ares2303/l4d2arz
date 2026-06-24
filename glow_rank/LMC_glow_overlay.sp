@@ -44,6 +44,9 @@ public void OnPluginStart() {
 
     RegAdminCmd("sm_gomenu", Cmd_GoMenu, ADMFLAG_CUSTOM1, "Opens Glow Overlay Menu");
     RegAdminCmd("sm_gcolor", Cmd_GoMenu, ADMFLAG_CUSTOM1, "Opens Glow Overlay Menu");
+    
+    // Perintah baru untuk penyegaran manual oleh sistem / SCS
+    RegAdminCmd("sm_refresh_glow_overlay", Cmd_RefreshGlowOverlay, ADMFLAG_CUSTOM1, "Refreshes client glow and color overlay");
 
     RegAdminCmd("sm_grg", Command_RG, ADMFLAG_CUSTOM1);
     RegAdminCmd("sm_crg", Command_CRG, ADMFLAG_CUSTOM1);
@@ -650,6 +653,18 @@ void SetColorShortcut(int client, const char[] rgb) {
     } else {
         ApplyGlowAndColor(client);
     }
+}
+
+// Callback perintah penyegaran manual dari system / console server
+public Action Cmd_RefreshGlowOverlay(int client, int args) {
+    if (args < 1) return Plugin_Handled;
+    char arg[16];
+    GetCmdArg(1, arg, sizeof(arg));
+    int target = GetClientOfUserId(StringToInt(arg));
+    if (target > 0 && IsClientInGame(target)) {
+        RequestApplyGlow(target);
+    }
+    return Plugin_Handled;
 }
 
 public Action Command_RG(int client, int args) {
