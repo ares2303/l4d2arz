@@ -2725,6 +2725,8 @@ public void RanktyConnect(int client)
 		{
 			if (IsPlayerAlive(targetEnt))
 			{
+				SetEntityRenderMode(colorEnt, RENDER_TRANSCOLOR);
+
 				if (ClientPoints[targetPlayer] >= 800000)
 				{
 					SetEntityRenderColor(colorEnt, 0, 0, 0, 255);
@@ -2761,6 +2763,7 @@ public void RanktyConnect(int client)
 				{
 					SetEntityRenderColor(colorEnt, 173, 255, 47, 255);
 				}
+				ServerCommand("sm_refresh_glow_overlay %d", GetClientUserId(targetPlayer));
 			}
 		}
 	}
@@ -4342,6 +4345,8 @@ void GrantPlayerColor(int client)
 
 	if (hm_stats_colors.IntValue < 1 || GetClientTeam(targetEnt) != 2) return;
 	{
+		SetEntityRenderMode(colorEnt, RENDER_TRANSCOLOR);
+
 		if (hm_stats_colors.IntValue == 1)
 		{
 			if (ClientRank[targetPlayer] > 0 && ClientRank[targetPlayer] < 51)
@@ -4356,7 +4361,8 @@ void GrantPlayerColor(int client)
 			else
 			{			
 				SetEntityRenderColor(colorEnt, 255, 255, 255, 255);	
-			}				
+			}
+			ServerCommand("sm_refresh_glow_overlay %d", GetClientUserId(targetPlayer));
 			return;				
 		}
 		if (hm_stats_colors.IntValue == 2)
@@ -4377,9 +4383,11 @@ void GrantPlayerColor(int client)
 			{
 				SetEntityRenderColor(colorEnt, 255, 255, 255, 255);
 			}
+			ServerCommand("sm_refresh_glow_overlay %d", GetClientUserId(targetPlayer));
 			return;
 		}
 		SetEntityRenderColor(colorEnt, 255, 255, 255, 255);
+		ServerCommand("sm_refresh_glow_overlay %d", GetClientUserId(targetPlayer));
 	}
 }
 
